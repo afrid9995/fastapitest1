@@ -1,0 +1,68 @@
+name: Build & Deploy
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - master
+jobs:
+  # Preparing the build environment variables
+  prepare-env:
+    name: Prepare Env
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      BUILD_ENV: ${{ steps.vars.outputs.BUILD_ENV }}
+      AWS_ACCESS_KEY_ID: ${{ steps.vars.outputs.AWS_ACCESS_KEY_ID }}
+      IMAGE_TAG: ${{ steps.vars.outputs.IMAGE_TAG }} 
+      AWS_REGION:  ${{ steps.vars.outputs.AWS_REGION }}
+    steps:
+    - id: vars
+      run: |
+          echo "AWS_ACCESS_KEY_ID=AWS_ACCESS_KEY_ID" >> $GITHUB_OUTPUT
+          echo "AWS_SECRET_ACCESS_KEY=AWS_SECRET_ACCESS_KEY" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          echo "AWS_REGION=us-east-1" >> $GITHUB_OUTPUT
+
+  # Building and Pushing Image to ECR
+  build-push-image:
+    name: Build and Push Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: prepare-env
+    env:
+      AWS_ACCESS_KEY_ID : ${{needs.prepare-env.outputs.AWS_ACCESS_KEY_ID}}
+      AWS_SECRET_ACCESS_KEY : ${{needs.prepare-env.outputs.AWS_SECRET_ACCESS_KEY}}
+      AWS_REGION : ${{needs.prepare-env.outputs.AWS_REGION}}
+      IMAGE_TAG: ${{needs.prepare-env.outputs.IMAGE_TAG}}
+    outputs:
+      ECR_REPO: ${{ steps.build.outputs.ECR_REPO }}
+
+    steps:
+    - name: 'Checkout repository on : ${{ github.REF }}'
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        aws-access-key-id: ${{ secrets[env.AWS_ACCESS_KEY_ID] }}
+        aws-secret-access-key: ${{ secrets[env.AWS_SECRET_ACCESS_KEY] }}
+        aws-region: ${{ env.AWS_REGION }}
+        mask-aws-account-id: 'no'
+
+    - name: Amazon ECR Login
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - id: build
+      name: Build and Push Image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{needs.prepare-env.outputs.IMAGE_TAG}}
+      run: |
+        ECR_REPO=$ECR_REGISTRY/$PROJECT-$BUILD_ENV-${AWS_REGION_CODE}-ecr-$APP_NAME
+        IMAGE_TAG=$IMAGE_TAG
+        docker build -t $ECR_REPO:$IMAGE_TAG .
+        docker push $ECR_REPO:$IMAGE_TAG
+        echo "ECR_REPO=$ECR_REPO" >> $GITHUB_OUTPUT
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT 
+        echo "App Image Tag: ${PROJECT}-${BUILD_ENV}-${AWS_REGION_CODE}-ecr-${APP_NAME}:${IMAGE_TAG} " >> $GITHUB_STEP_SUMMARY
