@@ -11,16 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
-      BUILD_ENV: ${{ steps.vars.outputs.BUILD_ENV }}
-      AWS_ACCESS_KEY_ID: ${{ steps.vars.outputs.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ steps.vars.outputs.AWS_SECRET_ACCESS_KEY }}
       IMAGE_TAG: ${{ steps.vars.outputs.IMAGE_TAG }} 
       AWS_REGION:  ${{ steps.vars.outputs.AWS_REGION }}
     steps:
     - id: vars
       run: |
-          echo "AWS_ACCESS_KEY_ID=AWS_ACCESS_KEY_ID" >> $GITHUB_OUTPUT
-          echo "AWS_SECRET_ACCESS_KEY=AWS_SECRET_ACCESS_KEY" >> $GITHUB_OUTPUT
           echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
           echo "AWS_REGION=us-east-1" >> $GITHUB_OUTPUT
 
@@ -31,8 +26,6 @@ jobs:
     timeout-minutes: 15
     needs: prepare-env
     env:
-      AWS_ACCESS_KEY_ID : ${{needs.prepare-env.outputs.AWS_ACCESS_KEY_ID}}
-      AWS_SECRET_ACCESS_KEY : ${{needs.prepare-env.outputs.AWS_SECRET_ACCESS_KEY}}
       AWS_REGION : ${{needs.prepare-env.outputs.AWS_REGION}}
       IMAGE_TAG: ${{needs.prepare-env.outputs.IMAGE_TAG}}
     outputs:
@@ -45,8 +38,8 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1-node16
       with:
-        aws-access-key-id: ${{ secrets[env.AWS_ACCESS_KEY_ID] }}
-        aws-secret-access-key: ${{ secrets[env.AWS_SECRET_ACCESS_KEY] }}
+        aws-access-key-id: ${{ secrets[AWS_ACCESS_KEY_ID] }}
+        aws-secret-access-key: ${{ secrets[AWS_SECRET_ACCESS_KEY] }}
         aws-region: ${{ env.AWS_REGION }}
         mask-aws-account-id: 'no'
 
