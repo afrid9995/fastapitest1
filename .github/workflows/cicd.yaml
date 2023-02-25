@@ -13,6 +13,7 @@ jobs:
     outputs:
       BUILD_ENV: ${{ steps.vars.outputs.BUILD_ENV }}
       AWS_ACCESS_KEY_ID: ${{ steps.vars.outputs.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ steps.vars.outputs.AWS_SECRET_ACCESS_KEY }}
       IMAGE_TAG: ${{ steps.vars.outputs.IMAGE_TAG }} 
       AWS_REGION:  ${{ steps.vars.outputs.AWS_REGION }}
     steps:
